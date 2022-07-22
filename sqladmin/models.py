@@ -163,6 +163,7 @@ class ModelAdmin(ModelView, metaclass=ModelAdminMeta):
     url_path_for: ClassVar[Callable]
 
     name_plural: ClassVar[str] = ""
+
     """Plural name of ModelAdmin.
     Default value is Model class name + `s`.
     """
@@ -186,6 +187,8 @@ class ModelAdmin(ModelView, metaclass=ModelAdminMeta):
     """Permission for exporting lists of Models.
     Default value is set to `True`.
     """
+
+    custom_actions = []
 
     # List page
     column_list: ClassVar[Sequence[Union[str, InstrumentedAttribute]]] = []
@@ -692,6 +695,15 @@ class ModelAdmin(ModelView, metaclass=ModelAdminMeta):
             pk=pk,
         )
 
+    def _url_for_custom_action(self, obj: Any, action_name:str) -> str:
+        pk = getattr(obj, inspect(obj).mapper.primary_key[0].name)
+        return self.url_path_for(
+            "admin:action_custom",
+            identity=slugify_class_name(obj.__class__.__name__),
+            pk=pk,
+            action_name=action_name
+        )
+
     def _get_default_sort(self) -> List[Tuple[str, bool]]:
         if self.column_default_sort:
             if isinstance(self.column_default_sort, list):
@@ -713,6 +725,10 @@ class ModelAdmin(ModelView, metaclass=ModelAdminMeta):
     async def count(self) -> int:
         rows = await self._run_query(self.count_query)
         return rows[0]
+
+    def action_custom_model(self, method : str, model_item: Any, request: Request):
+        pass
+        self.method()
 
     async def list(
         self,

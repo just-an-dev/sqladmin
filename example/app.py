@@ -2,6 +2,7 @@ from fastapi import FastAPI, APIRouter
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from starlette.requests import Request
+from starlette.routing import Route
 
 from sqladmin import Admin, ModelAdmin
 from sqladmin.models import ModelView
@@ -31,6 +32,18 @@ admin = Admin(app, engine,
 class UserAdmin(ModelAdmin, model=User):
     column_list = [User.id, User.name]
 
+    def custom_truc(self, model_item: User, request: Request):
+        return self.templates.TemplateResponse("sample.html", {"request": request, "data": f'truc user : {model_item.id}'})
+
+    custom_actions =[
+        # Route(
+        #     "/{identity}/tadam/{pk}",
+        #     endpoint=custom_truc,
+        #     name="action_custom",
+        #     methods=["GET"],
+        # ),
+        { 'name' : 'truc', 'method' : custom_truc}
+    ]
 
 admin.register_model(UserAdmin)
 

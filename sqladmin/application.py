@@ -83,6 +83,15 @@ class BaseAdmin:
 
         raise HTTPException(status_code=404)
 
+    def _find_method_custom_action(self, action_name: str) -> "ModelView":
+        for model_admin in self.model_admins:
+            if model_admin.custom_actions :
+                for custom in model_admin.custom_actions :
+                    if custom['name'] == action_name:
+                        return custom
+        else:
+            raise HTTPException(status_code=404)
+
     def register_model(self, model: Type["ModelAdmin"]) -> None:
         """Register ModelAdmin to the Admin.
 
@@ -103,6 +112,7 @@ class BaseAdmin:
         # Set database engine from Admin instance
         model.engine = self.engine
         model.url_path_for = self.app.url_path_for
+        model.templates = self.templates
 
         if isinstance(model.engine, Engine):
             model.sessionmaker = sessionmaker(bind=model.engine, class_=Session)
@@ -112,6 +122,10 @@ class BaseAdmin:
             model.async_engine = True
 
         self._model_admins.append((model()))
+
+        #if model.custom_actions :
+        #    pass
+
 
     def register_view(self, view: Type["ModelView"]) -> None:
         class_view = view()
@@ -262,12 +276,35 @@ class Admin(BaseAdminView):
                     name="export",
                     methods=["GET"],
                 ),
+                Route(
+                    "/{identity}/action/{action_name}/{pk}",
+                    endpoint=self.action_custom,
+                    name="action_custom",
+                    methods=["GET"],
+                ),
             ],
             exception_handlers={HTTPException: http_exception},
             middleware=middlewares,
             debug=debug,
         )
         self.app.mount(base_url, app=admin, name="admin")
+
+    async def action_custom(self, request: Request) -> Response:
+        """Index route which can be overridden to create dashboards."""
+        identity = request.path_params["identity"]
+        action_name = request.path_params['action_name']
+        data = self._find_method_custom_action(action_name=action_name)
+        model_admin = self._find_model_admin(identity)
+
+        model = await model_admin.get_model_by_pk(request.path_params["pk"])
+        if not model:
+            raise HTTPException(status_code=404)
+
+        return model_admin.action_custom_model(method=data['method'], model_item=model, request=request)
+        #func = data['method']
+        #if hasattr(model_admin, func) and callable(func := getattr(model_admin, func)):
+        #    func()
+        #return func
 
     async def index(self, request: Request) -> Response:
         """Index route which can be overridden to create dashboards."""

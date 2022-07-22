@@ -82,6 +82,9 @@
               {% endif %}
             </th>
             {% endfor %}
+            {% if model_admin.custom_actions %}
+            <th>Custom action</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -121,6 +124,16 @@
             <td>{{ formatted_value }}</td>
             {% endif %}
             {% endfor %}
+          {% if model_admin.custom_actions %}
+                          <td>
+            {% for custom_action in model_admin.custom_actions %}
+                  <a href="{{ model_admin._url_for_custom_action(row, custom_action['name']) }}" class="btn btn-primary">
+                    {{ custom_action['name'] }}
+                  </a>
+            {% endfor %}
+
+             </td>
+        {% endif %}
           </tr>
           {% endfor %}
         </tbody>
